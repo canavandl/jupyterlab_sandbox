@@ -22,7 +22,6 @@ import {
 
 // import '../style/index.css';
 
-
 class IFrame extends Widget implements DocumentRegistry.IReadyWidget {
   private _element: HTMLIFrameElement
   private _ready = new PromiseDelegate<void>();
