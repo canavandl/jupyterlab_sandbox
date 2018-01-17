@@ -4,45 +4,43 @@ import {
 } from '@jupyterlab/application'
 
 import {
-  ICommandPalette
+  ICommandPalette,
+  IFrame
 } from '@jupyterlab/apputils'
 
 import {
-  DocumentRegistry
-} from '@jupyterlab/docregistry'
-
-import {
-  JSONObject,
-  PromiseDelegate
+  JSONObject
 } from '@phosphor/coreutils'
 
 import {
+  PanelLayout,
   Widget
 } from '@phosphor/widgets'
+import { Message } from '@phosphor/messaging';
 
 // import '../style/index.css';
 
-class IFrame extends Widget implements DocumentRegistry.IReadyWidget {
-  private _element: HTMLIFrameElement
-  private _ready = new PromiseDelegate<void>();
+class PanelIFrame extends Widget {
+  readonly url: string
 
-  constructor(args: JSONObject) {
+  constructor(url: string) {
     super()
+    this.url = url
 
-    this._element = document.createElement("iframe")
+    let layout = this.layout = new PanelLayout()
+    let iframe = new IFrame()
+    iframe.url = url
 
-    this._render()
+    layout.addWidget(iframe)
   }
 
-  get ready(): Promise<void> {
-    return this._ready.promise;
+  protected onActivateRequest(msg: Message): void {
+    this.node.tabIndex = -1;
+    this.node.focus();
   }
 
-  private _render(): void {
-    this._element.src = 'https://www.google.com'
-
-    this.node.appendChild(this._element)
-
+  protected onCloseRequest(msg: Message) {
+    this.dispose()
   }
 }
 
@@ -67,7 +65,12 @@ const extension: JupyterLabPlugin<void> = {
     commands.addCommand(CommandIDs.create, {
       label: 'Load IFrame',
       execute: (args: JSONObject) => {
-        let frame = new IFrame(args)
+
+        let frame = new PanelIFrame('https://jupyterlab.readthedocs.io/en/stable/')
+        frame.title.label = 'my title label'
+        frame.title.closable = true
+        frame.id = 'my-custom-id-and-stuff'
+
         app.shell.addToMainArea(frame)
       }
     })
