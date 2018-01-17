@@ -1,0 +1,45 @@
+{
+  "name": "jupyterlab_iframe",
+  "version": "0.1.0",
+  "description": "Load webpages as IFrames embedded in panels",
+  "keywords": [
+    "extension",
+    "jupyter",
+    "jupyterlab"
+  ],
+  "homepage": "https://github.com/canavandl/jupyterlab_iframe",
+  "bugs": {
+    "url": "https://github.com/canavandl/jupyterlab_iframe/issues"
+  },
+  "license": "BSD-3-Clause",
+  "author": "Luke Canavan",
+  "files": [
+    "lib/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
+    "style/**/*.{css,eot,gif,html,jpg,json,png,svg,woff2,ttf}"
+  ],
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/canavandl/jupyterlab_iframe.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf lib",
+    "watch": "tsc -w"
+  },
+  "dependencies": {
+    "@jupyterlab/application": "^0.15.0",
+    "@jupyterlab/apputils": "^0.15.0",
+    "@jupyterlab/docregistry": "^0.15.0",
+    "@phosphor/coreutils": "^1.3.0",
+    "@phosphor/widgets": "^1.5.0"
+  },
+  "devDependencies": {
+    "rimraf": "^2.6.1",
+    "typescript": "~2.6.0"
+  },
+  "jupyterlab": {
+    "extension": true
+  }
+}
