@@ -5,8 +5,14 @@ import {
 
 import {
   ICommandPalette,
-  IFrame
+  IFrame,
+  showDialog,
+  Dialog
 } from '@jupyterlab/apputils'
+
+import {
+  Widget
+} from '@phosphor/widgets';
 
 // import {
 //   ElementAttrNames,
@@ -37,6 +43,7 @@ class Sandbox extends IFrame implements Sandbox.IModel {
     iframe.setAttribute('sandbox', this.sandboxAttr)
   }
 }
+
 
 /** A namespace for all `iframe`-related things
  */
@@ -71,7 +78,6 @@ namespace Sandbox {
     sandBox: TSandboxOptions;
     sandboxAttr: string;
     // shouldDraw: boolean;
-    // src: string;
   }
 }
 
@@ -84,26 +90,56 @@ namespace CommandIDs {
 }
 
 
-/**
- * Initialization data for the jupyterlab_iframe extension.
- */
+class SandboxModal extends Widget {
+  constructor() {
+    let body = document.createElement("div")
+    let label = document.createElement("label")
+    label.textContent = 'Input a valid url'
+    let input = document.createElement("input")
+    body.appendChild(label)
+    body.appendChild(input)
+    super( { node: body })
+  }
+
+  get inputNode(): HTMLInputElement {
+    return this.node.querySelector('input') as HTMLInputElement;
+  }
+
+  getValue(): string {
+    return this.inputNode.value;
+  }
+}
+
+
 const extension: JupyterLabPlugin<void> = {
-  id: 'jupyterlab_iframe',
+  id: 'jupyterlab_sandbox',
   autoStart: true,
   requires: [ICommandPalette],
   activate: (app: JupyterLab, palette: ICommandPalette) => {
-    const { commands } = app;
-    commands.addCommand(CommandIDs.create, {
-      label: 'Load Web Page in a Sandbox',
-      execute: () => {
-        let frame = new Sandbox()
-        frame.sandBox = Sandbox.DEFAULT_SANDBOX
-        frame.url = 'https://jupyterlab.readthedocs.io/en/stable/'
-        frame.title.label = 'Sandbox'
-        frame.title.closable = true
-        frame.id = 'my-custom-id-and-stuff'
+    let counter = 0;
+    const namespace = 'sandbox-widget';
 
-        app.shell.addToMainArea(frame)
+    app.commands.addCommand(CommandIDs.create, {
+      label: 'Web Page',
+      execute: () => {
+        showDialog({
+          title: 'Open a Web Page',
+          body: new SandboxModal(),
+          buttons: [Dialog.cancelButton(), Dialog.okButton()]
+        }).then(result => {
+          if (!result.value) {
+            return null;
+          }
+          let frame = new Sandbox()
+          frame.sandBox = Sandbox.DEFAULT_SANDBOX
+          frame.title.label = 'Sandbox'
+          frame.title.closable = true
+          frame.id = `${namespace}-${++counter}`
+          frame.url = result.value
+
+          app.shell.addToMainArea(frame)
+          return Promise.resolve()
+        })
       }
     })
     palette.addItem({ command: CommandIDs.create, category: 'Sandbox' });
