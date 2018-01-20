@@ -8,39 +8,70 @@ import {
   IFrame
 } from '@jupyterlab/apputils'
 
-import {
-  JSONObject
-} from '@phosphor/coreutils'
+// import {
+//   ElementAttrNames,
+// } from '@phosphor/virtualdom';
 
-import {
-  PanelLayout,
-  Widget
-} from '@phosphor/widgets'
-import { Message } from '@phosphor/messaging';
 
 // import '../style/index.css';
 
-class PanelIFrame extends Widget {
-  readonly url: string
 
-  constructor(url: string) {
+class Sandbox extends IFrame implements Sandbox.IModel {
+  private _sandBox: Sandbox.TSandboxOptions
+
+  constructor() {
     super()
-    this.url = url
-
-    let layout = this.layout = new PanelLayout()
-    let iframe = new IFrame()
-    iframe.url = url
-
-    layout.addWidget(iframe)
   }
 
-  protected onActivateRequest(msg: Message): void {
-    this.node.tabIndex = -1;
-    this.node.focus();
+  get sandboxAttr() {
+    return Object.keys(this._sandBox || {}).join(' ');
   }
 
-  protected onCloseRequest(msg: Message) {
-    this.dispose()
+  get sandBox() {
+    return this._sandBox
+  }
+
+  set sandBox(attrs: Sandbox.TSandboxOptions) {
+    this._sandBox = attrs
+    let iframe = this.node.querySelector('iframe')
+    iframe.setAttribute('sandbox', this.sandboxAttr)
+  }
+}
+
+/** A namespace for all `iframe`-related things
+ */
+namespace Sandbox {
+  /** The list of HTML iframe sandbox options
+   *
+   *  https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#attr-sandbox
+   */
+  export type TSandboxPerm = 'allow-forms' | 'allow-modals' | 'orientation-lock' |
+    'allow-pointer-lock' | 'allow-popups' | 'allow-popups-to-escape-sandbox' |
+    'allow-presentation' | 'allow-same-origin' | 'allow-scripts' | 'allow-top-navigation';
+
+
+  /** A type that can enable sandbox permissions */
+  export type TSandboxOptions = {[P in TSandboxPerm]?: boolean; };
+
+
+  /** Generally useful subset of permissions that can run things like JupyterLab and Bokeh */
+  export const DEFAULT_SANDBOX: TSandboxOptions = {
+    'allow-forms': true,
+    'allow-presentation': true,
+    'allow-same-origin': true,
+    'allow-scripts': true,
+  };
+
+  // export type TSandBoxProblem = 'no-src' | 'insecure-origin' | 'protocol-mismatch';
+
+  /** Base frame model */
+  export interface IModel {
+    // extraAttrs: {[P in ElementAttrNames]?: string};
+    // problem: TSandBoxProblem;
+    sandBox: TSandboxOptions;
+    sandboxAttr: string;
+    // shouldDraw: boolean;
+    // src: string;
   }
 }
 
@@ -49,7 +80,7 @@ class PanelIFrame extends Widget {
  */
 namespace CommandIDs {
   export
-    const create = 'iframe:create';
+    const create = 'sandbox:create';
 }
 
 
@@ -63,19 +94,21 @@ const extension: JupyterLabPlugin<void> = {
   activate: (app: JupyterLab, palette: ICommandPalette) => {
     const { commands } = app;
     commands.addCommand(CommandIDs.create, {
-      label: 'Load IFrame',
-      execute: (args: JSONObject) => {
-
-        let frame = new PanelIFrame('https://jupyterlab.readthedocs.io/en/stable/')
-        frame.title.label = 'my title label'
+      label: 'Load Web Page in a Sandbox',
+      execute: () => {
+        let frame = new Sandbox()
+        frame.sandBox = Sandbox.DEFAULT_SANDBOX
+        frame.url = 'https://jupyterlab.readthedocs.io/en/stable/'
+        frame.title.label = 'Sandbox'
         frame.title.closable = true
         frame.id = 'my-custom-id-and-stuff'
 
         app.shell.addToMainArea(frame)
       }
     })
-    palette.addItem({ command: CommandIDs.create, category: 'Launcher' });
+    palette.addItem({ command: CommandIDs.create, category: 'Sandbox' });
   }
 };
+
 
 export default extension;
