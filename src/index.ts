@@ -14,10 +14,6 @@ import {
   Widget
 } from '@phosphor/widgets';
 
-// import {
-//   ElementAttrNames,
-// } from '@phosphor/virtualdom';
-
 
 // import '../style/index.css';
 
@@ -27,6 +23,10 @@ class Sandbox extends IFrame implements Sandbox.IModel {
 
   constructor() {
     super()
+  }
+
+  get iframeNode() {
+    return this.node.querySelector('iframe')
   }
 
   get sandboxAttr() {
@@ -39,8 +39,7 @@ class Sandbox extends IFrame implements Sandbox.IModel {
 
   set sandBox(attrs: Sandbox.TSandboxOptions) {
     this._sandBox = attrs
-    let iframe = this.node.querySelector('iframe')
-    iframe.setAttribute('sandbox', this.sandboxAttr)
+    this.iframeNode.setAttribute('sandbox', this.sandboxAttr)
   }
 }
 
@@ -58,8 +57,7 @@ namespace Sandbox {
 
 
   /** A type that can enable sandbox permissions */
-  export type TSandboxOptions = {[P in TSandboxPerm]?: boolean; };
-
+  export type TSandboxOptions = {[P in TSandboxPerm]?: boolean};
 
   /** Generally useful subset of permissions that can run things like JupyterLab and Bokeh */
   export const DEFAULT_SANDBOX: TSandboxOptions = {
@@ -69,15 +67,14 @@ namespace Sandbox {
     'allow-scripts': true,
   };
 
+  // todo implement error handling?
   // export type TSandBoxProblem = 'no-src' | 'insecure-origin' | 'protocol-mismatch';
 
-  /** Base frame model */
+  /** Base sandbox model */
   export interface IModel {
-    // extraAttrs: {[P in ElementAttrNames]?: string};
     // problem: TSandBoxProblem;
     sandBox: TSandboxOptions;
     sandboxAttr: string;
-    // shouldDraw: boolean;
   }
 }
 
@@ -117,7 +114,7 @@ const extension: JupyterLabPlugin<void> = {
   requires: [ICommandPalette],
   activate: (app: JupyterLab, palette: ICommandPalette) => {
     let counter = 0;
-    const namespace = 'sandbox-widget';
+    const namespace = 'sandbox-ext';
 
     app.commands.addCommand(CommandIDs.create, {
       label: 'Web Page',
