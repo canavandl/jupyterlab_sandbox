@@ -18,19 +18,22 @@ import {
 } from '@phosphor/coreutils';
 
 import {
-  Widget
+  Widget,
+  Panel
 } from '@phosphor/widgets';
-
 
 
 // import '../style/index.css';
 
 
-export class Sandbox extends IFrame {
+export class Sandbox extends Panel {
   private _sandBox: SandboxNS.TSandboxOptions
+  private _frame: IFrame
 
   constructor() {
     super()
+    this._frame = new IFrame()
+    this.addWidget(this._frame)
   }
 
   get iframeNode() {
@@ -49,6 +52,14 @@ export class Sandbox extends IFrame {
     this._sandBox = attrs
     this.iframeNode.setAttribute('sandbox', this.sandboxAttr)
   }
+
+  get url() {
+    return this._frame.url
+  }
+
+  set url(url: string) {
+    this._frame.url = url
+  }
 }
 
 
@@ -58,6 +69,8 @@ class SandboxModal extends Widget {
     let label = document.createElement("label")
     label.textContent = 'Input a valid url'
     let input = document.createElement("input")
+    // perhaps should just match window.location.protocol?
+    input.placeholder = "protocol:host"
     body.appendChild(label)
     body.appendChild(input)
     super({ node: body })
