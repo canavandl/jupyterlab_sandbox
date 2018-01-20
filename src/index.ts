@@ -1,4 +1,5 @@
 import {
+  ILayoutRestorer,
   JupyterLab,
   JupyterLabPlugin
 } from '@jupyterlab/application'
@@ -7,19 +8,26 @@ import {
   ICommandPalette,
   IFrame,
   showDialog,
-  Dialog
+  Dialog,
+  IInstanceTracker,
+  InstanceTracker
 } from '@jupyterlab/apputils'
+
+import {
+  Token,
+} from '@phosphor/coreutils';
 
 import {
   Widget
 } from '@phosphor/widgets';
 
 
+
 // import '../style/index.css';
 
 
-class Sandbox extends IFrame implements Sandbox.IModel {
-  private _sandBox: Sandbox.TSandboxOptions
+export class Sandbox extends IFrame {
+  private _sandBox: SandboxNS.TSandboxOptions
 
   constructor() {
     super()
@@ -37,16 +45,37 @@ class Sandbox extends IFrame implements Sandbox.IModel {
     return this._sandBox
   }
 
-  set sandBox(attrs: Sandbox.TSandboxOptions) {
+  set sandBox(attrs: SandboxNS.TSandboxOptions) {
     this._sandBox = attrs
     this.iframeNode.setAttribute('sandbox', this.sandboxAttr)
   }
 }
 
 
+class SandboxModal extends Widget {
+  constructor() {
+    let body = document.createElement("div")
+    let label = document.createElement("label")
+    label.textContent = 'Input a valid url'
+    let input = document.createElement("input")
+    body.appendChild(label)
+    body.appendChild(input)
+    super({ node: body })
+  }
+
+  get inputNode(): HTMLInputElement {
+    return this.node.querySelector('input') as HTMLInputElement;
+  }
+
+  getValue(): string {
+    return this.inputNode.value;
+  }
+}
+
+
 /** A namespace for all `iframe`-related things
  */
-namespace Sandbox {
+export namespace SandboxNS {
   /** The list of HTML iframe sandbox options
    *
    *  https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#attr-sandbox
@@ -67,14 +96,23 @@ namespace Sandbox {
     'allow-scripts': true,
   };
 
-  // todo implement error handling?
+  // @todo: implement error handling
   // export type TSandBoxProblem = 'no-src' | 'insecure-origin' | 'protocol-mismatch';
+}
 
-  /** Base sandbox model */
-  export interface IModel {
-    // problem: TSandBoxProblem;
-    sandBox: TSandboxOptions;
-    sandboxAttr: string;
+
+namespace Private {
+  let counter = 0
+  export const namespace = 'sandbox-ext';
+
+  export function createSandbox(url: string, options: SandboxNS.TSandboxOptions): Sandbox {
+    let frame = new Sandbox()
+    frame.id = `${namespace}-${++counter}`
+    frame.title.label = 'Sandbox'
+    frame.title.closable = true
+    frame.sandBox = options
+    frame.url = url
+    return frame
   }
 }
 
@@ -82,66 +120,72 @@ namespace Sandbox {
  * The command IDs used by the launcher plugin.
  */
 namespace CommandIDs {
-  export
-    const create = 'sandbox:create';
+  export const create = 'sandbox:create'
+  export const restore = 'sandbox:restore'
 }
 
 
-class SandboxModal extends Widget {
-  constructor() {
-    let body = document.createElement("div")
-    let label = document.createElement("label")
-    label.textContent = 'Input a valid url'
-    let input = document.createElement("input")
-    body.appendChild(label)
-    body.appendChild(input)
-    super( { node: body })
-  }
-
-  get inputNode(): HTMLInputElement {
-    return this.node.querySelector('input') as HTMLInputElement;
-  }
-
-  getValue(): string {
-    return this.inputNode.value;
-  }
-}
+/**
+ * A class that tracks sandbox widgets.
+ */
+export interface ISandboxTracker extends IInstanceTracker<Sandbox>{}
 
 
-const extension: JupyterLabPlugin<void> = {
+/**
+ * The editor tracker token.
+ */
+export const ISandboxTracker = new Token<ISandboxTracker>('jupyterlab_sandbox:ISandboxTracker');
+
+
+const extension: JupyterLabPlugin<ISandboxTracker> = {
   id: 'jupyterlab_sandbox',
   autoStart: true,
-  requires: [ICommandPalette],
-  activate: (app: JupyterLab, palette: ICommandPalette) => {
-    let counter = 0;
-    const namespace = 'sandbox-ext';
+  requires: [ICommandPalette, ILayoutRestorer],
+  provides: ISandboxTracker,
+  activate: (app: JupyterLab, palette: ICommandPalette, restorer: ILayoutRestorer) => {
+    const tracker = new InstanceTracker<Sandbox>({ namespace: Private.namespace })
+
+    // Handle state restoration.
+    restorer.restore(tracker, {
+      command: CommandIDs.restore,
+      args: (widget) => ({url: widget.url, sandbox: widget.sandbox}),
+      name: () => Private.namespace
+    });
+
+    // not added to palette, only exists to reload page without modal creation
+    app.commands.addCommand(CommandIDs.restore, {
+      execute: (args) => {
+        const url = args['url'] as string
+        // fixme: should pass in args['sandbox'] to createSandbox but it's always undefined
+        // const options = args['sandbox'] as Sandbox.TSandboxOptions
+        let frame = Private.createSandbox(url, SandboxNS.DEFAULT_SANDBOX)
+        tracker.add(frame)
+        app.shell.addToMainArea(frame)
+      }
+    })
 
     app.commands.addCommand(CommandIDs.create, {
-      label: 'Web Page',
-      execute: () => {
+      label: 'Open Web Page',
+      execute: (args) => {
         showDialog({
           title: 'Open a Web Page',
           body: new SandboxModal(),
-          buttons: [Dialog.cancelButton(), Dialog.okButton()]
+          buttons: [Dialog.cancelButton(), Dialog.okButton()],
+          focusNodeSelector: 'input'
         }).then(result => {
           if (!result.value) {
             return null;
           }
-          let frame = new Sandbox()
-          frame.sandBox = Sandbox.DEFAULT_SANDBOX
-          frame.title.label = 'Sandbox'
-          frame.title.closable = true
-          frame.id = `${namespace}-${++counter}`
-          frame.url = result.value
-
+          let frame = Private.createSandbox(result.value, SandboxNS.DEFAULT_SANDBOX)
+          tracker.add(frame)
           app.shell.addToMainArea(frame)
           return Promise.resolve()
         })
       }
     })
     palette.addItem({ command: CommandIDs.create, category: 'Sandbox' });
+    return tracker
   }
 };
-
 
 export default extension;
