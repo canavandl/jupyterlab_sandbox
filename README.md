@@ -1,6 +1,6 @@
-# jupyterlab_iframe
+# jupyterlab_sandbox
 
-Load webpages as IFrames embedded in panels
+Load webpages as sandboxed IFrames embedded in panels
 
 
 ## Prerequisites
@@ -10,7 +10,7 @@ Load webpages as IFrames embedded in panels
 ## Installation
 
 ```bash
-jupyter labextension install jupyterlab_iframe
+jupyter labextension install jupyterlab_sandbox
 ```
 
 ## Development
